@@ -1,0 +1,13 @@
+services:
+  db:
+    image: postgres:16
+    environment: { POSTGRES_USER: wifi, POSTGRES_PASSWORD: wifi, POSTGRES_DB: wifiradar }
+    volumes: [pgdata:/var/lib/postgresql/data]
+    ports: ["${DB_PORT:-5432}:5432"]
+  web:
+    build: .
+    depends_on: [db]
+    env_file: .env
+    environment: { DATABASE_URL: "postgresql://wifi:wifi@db:5432/wifiradar" }
+    ports: ["3000:3000"]
+volumes: { pgdata: {} }

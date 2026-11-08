@@ -1,0 +1,9 @@
+@tailwind base; @tailwind components; @tailwind utilities;
+:root { color-scheme: dark; }
+body { background: radial-gradient(1200px 600px at 70% -10%, #0e2150 0%, #050914 60%) fixed; color: #dbe6ff; font-feature-settings: "tnum"; }
+.glass { background: linear-gradient(160deg, rgba(20,34,78,.55), rgba(7,12,30,.7)); border: 1px solid rgba(80,120,255,.18); backdrop-filter: blur(14px); border-radius: 18px; }
+.sweep { background: conic-gradient(from 0deg, rgba(34,227,255,0) 0deg, rgba(34,227,255,.38) 40deg, rgba(34,227,255,0) 42deg); animation: spin 4s linear infinite; }
+.sweep.paused { animation-play-state: paused; opacity: .25; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .sweep { animation: none; } }
+:focus-visible { outline: 2px solid #22e3ff; outline-offset: 2px; }

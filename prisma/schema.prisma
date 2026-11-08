@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Source {
+  ANDROID
+  WINDOWS
+  LINUX
+  MACOS
+}
+
+enum Confidence {
+  VERIFIED
+  DB_ESTIMATED
+  USER_REPORTED
+  UNKNOWN
+}
+
+model User {
+  id        String         @id @default(cuid())
+  email     String         @unique
+  createdAt DateTime       @default(now())
+  devices   Device[]
+  networks  WifiNetwork[]
+  aps       AccessPoint[]
+  sessions  ScanSession[]
+  saved     SavedNetwork[]
+}
+
+model Device {
+  id               String        @id @default(cuid())
+  userId           String
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name             String        @default("Unpaired device")
+  platform         Source?
+  tokenHash        String?       @unique
+  pairingCodeHash  String?       @unique
+  pairingExpiresAt DateTime?
+  lastSeenAt       DateTime?
+  createdAt        DateTime      @default(now())
+  sessions         ScanSession[]
+}
+
+model WifiNetwork {
+  id     String        @id @default(cuid())
+  userId String
+  user   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ssid   String
+  hidden Boolean       @default(false)
+  aps    AccessPoint[]
+
+  @@unique([userId, ssid])
+}
+
+model AccessPoint {
+  id          String           @id @default(cuid())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  networkId   String
+  network     WifiNetwork      @relation(fields: [networkId], references: [id], onDelete: Cascade)
+  bssid       String
+  frequency   Int
+  channel     Int
+  band        String
+  security    String
+  firstSeenAt DateTime
+  lastSeenAt  DateTime
+  lastDbm     Int
+  results     ScanResult[]
+  history     SignalHistory[]
+  locations   LocationRecord[]
+  saved       SavedNetwork[]
+
+  @@unique([userId, bssid])
+  @@index([userId, lastSeenAt])
+}
+
+model ScanSession {
+  id             String       @id @default(cuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceId       String
+  device         Device       @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  source         Source
+  startedAt      DateTime
+  connectedBssid String?
+  // Scanner (user) position. This is NOT an access-point position.
+  scannerLat     Float?
+  scannerLon     Float?
+  scannerAccM    Float?
+  results        ScanResult[]
+
+  @@index([userId, startedAt])
+}
+
+model ScanResult {
+  id        String      @id @default(cuid())
+  sessionId String
+  session   ScanSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  apId      String
+  ap        AccessPoint @relation(fields: [apId], references: [id], onDelete: Cascade)
+  dbm       Int
+
+  @@index([sessionId])
+}
+
+model SignalHistory {
+  id   String      @id @default(cuid())
+  apId String
+  ap   AccessPoint @relation(fields: [apId], references: [id], onDelete: Cascade)
+  dbm  Int
+  at   DateTime
+
+  @@index([apId, at])
+}
+
+model SavedNetwork {
+  id     String      @id @default(cuid())
+  userId String
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  apId   String
+  ap     AccessPoint @relation(fields: [apId], references: [id], onDelete: Cascade)
+  note   String?
+
+  @@unique([userId, apId])
+}
+
+// Access-point coordinates only ever come from a provider or the user, with an honest confidence label.
+model LocationRecord {
+  id         String      @id @default(cuid())
+  apId       String
+  ap         AccessPoint @relation(fields: [apId], references: [id], onDelete: Cascade)
+  lat        Float
+  lon        Float
+  accuracyM  Float?
+  confidence Confidence
+  provider   String
+  createdAt  DateTime    @default(now())
+
+  @@index([apId])
+}
